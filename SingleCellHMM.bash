@@ -5,7 +5,7 @@ PREFIX=`echo ${INPUT_BAM} | rev | cut -d . -f 2- |rev`
 TMPDIR=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 mkdir ${TMPDIR}
 
-exec > >(tee SingleCellHMM_Run_${tmp}.log)
+exec > >(tee SingleCellHMM_Run_${TMPDIR}.log)
 exec 2>&1
 
 echo "INPUT_BAM                 $INPUT_BAM"
