@@ -11,9 +11,9 @@ exec 2>&1
 echo "INPUT_BAM                 $INPUT_BAM"
 echo "temp folder               $TMPDIR"
 echo ""
-echo "Reads  spread over splicing junction will join HMM blocks"
-echo "To avoid that, splict reads into small blocks before input to groHMM"
-echo "Splicting reads..."
+echo "Reads spanning over splicing junction will join HMM blocks"
+echo "To avoid that, split reads into small blocks before input to groHMM"
+echo "Spliting and sorting reads..."
 bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30 |gzip > ${PREFIX}_split.bed.gz
 
 
@@ -24,7 +24,7 @@ gzip ${PREFIX}_split_HMM.bed
 
 
 
-echo "Mergeing HMM blocks within 500bp..."
+echo "Merging HMM blocks within 500bp..."
 f=${PREFIX}_split_HMM
 zcat $f.bed.gz | grep + > ${f}_plus
 zcat $f.bed.gz | grep - > ${f}_minus
@@ -36,7 +36,7 @@ cat ${f}_plus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${f}_
 cat ${f}_minus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${f}_merge500
 rm ${f}_plus_merge500 ${f}_minus_merge500
 
-echo "Calcuating the coverage..." 
+echo "Calculating the coverage..." 
 LC_ALL=C sort -k1,1V -k2,2n ${f}_merge500 --parallel=30 > ${f}_merge500.sorted.bed
 rm ${f}_merge500
 
