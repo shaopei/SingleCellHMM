@@ -13,29 +13,23 @@ echo "temp folder               $TMPDIR"
 echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
-echo "Spliting reads..."
-bedtools bamtobed -i ${INPUT_BAM} -split |gzip > ${PREFIX}_split.bed.gz
-
-echo ""
-echo "Sorting reads in the background..."
-zcat ${PREFIX}_split.bed.gz |LC_ALL=C sort -k1,1V -k2,2n --parallel=30 | gzip > ${PREFIX}_split.sorted.bed.gz &
+echo "Spliting and sorting reads..."
+bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30 | gzip > ${PREFIX}_split.sorted.bed.gz 
  
 echo ""
 echo "Start to run groHMM..."
-R --vanilla --slave --args $(pwd) ${PREFIX}_split.bed.gz < SingleCellHMM.R 
-
-
+R --vanilla --slave --args $(pwd) ${PREFIX}_split.sorted.bed.gz  < SingleCellHMM.R 
 
 
 echo ""
 echo "Merging HMM blocks within 500bp..."
-f=${PREFIX}_split_HMM
+f=${PREFIX}_split.sorted_HMM
 cat $f.bed | grep + > ${f}_plus
 cat $f.bed | grep - > ${f}_minus
 bedtools merge -s -d 500 -i ${f}_plus > ${f}_plus_merge500
 bedtools merge -s -d 500 -i ${f}_minus > ${f}_minus_merge500
 rm ${f}_plus ${f}_minus
-gzip ${PREFIX}_split_HMM.bed
+gzip ${f}.bed &
 
 cat ${f}_plus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${f}_merge500
 cat ${f}_minus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${f}_merge500
