@@ -1,13 +1,19 @@
-# bash SingleCellHMM.bash  pbmc4k_possorted_genome_bam.bam
+# bash SingleCellHMM.bash  Path_to_bam_file pbmc4k_possorted_genome_bam.bam 
+# make sure you can call SingleCellHMM.R in the current folder
 
-INPUT_BAM=$1 #pbmc4k_possorted_genome_bam.bam
+WD=$1
+INPUT_BAM=$2 #pbmc4k_possorted_genome_bam.bam
+cd ${WD}
+ln -s /workdir/sc2457/SingleCellHMM/SingleCellHMM.R .
 PREFIX=`echo ${INPUT_BAM} | rev | cut -d . -f 2- |rev`
-TMPDIR=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+tmp=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+TMPDIR=${PREFIX}_${tmp}
 mkdir ${TMPDIR}
 
 exec > >(tee SingleCellHMM_Run_${TMPDIR}.log)
 exec 2>&1
 
+echo "Path to INPUT_BAM         $WD"   
 echo "INPUT_BAM                 $INPUT_BAM"
 echo "temp folder               $TMPDIR"
 echo ""
