@@ -29,13 +29,14 @@ R --vanilla --slave --args $(pwd) ${PREFIX}_split.sorted.bed.gz  < SingleCellHMM
 
 echo ""
 echo "Merging HMM blocks within 500bp..."
+cd ${TMPDIR}
 f=${PREFIX}_split.sorted_HMM
-cat $f.bed | grep + > ${f}_plus
-cat $f.bed | grep - > ${f}_minus
+cat ${WD}/$f.bed | grep + > ${f}_plus
+cat ${WD}/$f.bed | grep - > ${f}_minus
 bedtools merge -s -d 500 -i ${f}_plus > ${f}_plus_merge500
 bedtools merge -s -d 500 -i ${f}_minus > ${f}_minus_merge500
 rm ${f}_plus ${f}_minus
-gzip ${f}.bed &
+gzip ${WD}/${f}.bed &
 
 cat ${f}_plus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${f}_merge500
 cat ${f}_minus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${f}_merge500
@@ -54,6 +55,8 @@ echo "Filtering the HMM blocks by coverage..."
 cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 2){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge500_2reads.bed.gz
 cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 5){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge500_5reads.bed.gz
 
-rm ${PREFIX}_split.bed.gz
-mv ${f}_merge500.sorted.bed ${f}_merge500.sorted.bed_count ${TMPDIR}/.
+#rm ${PREFIX}_split.bed.gz
+#mv ${f}_merge500.sorted.bed ${f}_merge500.sorted.bed_count ${TMPDIR}/.
+cd ..
+ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
 gzip ${TMPDIR}/*
