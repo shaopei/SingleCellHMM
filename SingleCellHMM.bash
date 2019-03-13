@@ -18,7 +18,7 @@ echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
 echo "Spliting and sorting reads..."
-bedtools bamtobed -i ${WD}/${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30| awk '{print "chr"$0}' | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
+bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30| awk '{print "chr"$0}' | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
 
 cd ${TMPDIR}
 zcat ${PREFIX}_split.sorted.bed.gz  |awk '{print $0 >> $1".bed"}' 
