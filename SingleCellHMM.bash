@@ -31,7 +31,7 @@ echo "Start to run groHMM in each individual chromosome..."
 
 wait_a_second() {
 	joblist=($(jobs -p))
-    while (( ${#joblist[*]} >= 50 ))
+    while (( ${#joblist[*]} >= 10 ))
 	    do
 	    sleep 1
 	    joblist=($(jobs -p))
