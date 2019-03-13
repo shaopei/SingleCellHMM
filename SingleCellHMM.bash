@@ -1,7 +1,10 @@
-# bash SingleCellHMM.bash  Path_to_bam_file/pbmc4k_possorted_genome_bam.bam Path_to_SingleCellHMM.R
+# bash SingleCellHMM.bash  Path_to_bam_file/pbmc4k_possorted_genome_bam.bam numberOfThread Path_to_SingleCellHMM.R
 
 INPUT_BAM=$1 #pbmc4k_possorted_genome_bam.bam
-PL=$2
+CORE=$2
+PL=$3
+
+${CORE:=5}
 ${PL:=/workdir/sc2457/SingleCellHMM/}
 
 PREFIX=`echo ${INPUT_BAM} | rev | cut -d / -f 1 |cut -d . -f 2- |rev`
@@ -31,7 +34,7 @@ echo "Start to run groHMM in each individual chromosome..."
 
 wait_a_second() {
 	joblist=($(jobs -p))
-    while (( ${#joblist[*]} >= 10 ))
+    while (( ${#joblist[*]} >= ${CORE} ))
 	    do
 	    sleep 1
 	    joblist=($(jobs -p))
@@ -105,5 +108,6 @@ for f in *
 do gzip ${f} &
 done
 
-
+cd ../..
+zcat ${f}_merge500_5reads.bed.gz |cut -f 1 |uniq
 
