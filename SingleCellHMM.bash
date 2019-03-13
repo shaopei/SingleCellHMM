@@ -83,7 +83,7 @@ LC_ALL=C sort -k1,1V -k2,2n ${f}_merge500 --parallel=30 > ${f}_merge500.sorted.b
 rm ${f}_merge500
 
 
-bedtools coverage -a ${f}_merge500.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz |awk '{print "chr"$0}') -s -counts -split -sorted > ${f}_merge500.sorted.bed_count
+bedtools coverage -a ${f}_merge500.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz) -s -counts -split -sorted > ${f}_merge500.sorted.bed_count
 
 echo ""
 echo "Filtering the HMM blocks by coverage..." 
