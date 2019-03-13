@@ -22,7 +22,7 @@ bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel
 
 cd ${TMPDIR}
 zcat ${PREFIX}_split.sorted.bed.gz  |awk '{print $0 >> $1".bed"}' 
-find ${TMPDIR} -name "*.bed" -size -1024k -delete
+find -name "*.bed" -size -1024k -delete
 #wc chr*.bed -l > chr_read_count.txt
 
 echo ""
