@@ -1,11 +1,10 @@
-# bash SingleCellHMM.bash  Path_to_bam_file pbmc4k_possorted_genome_bam.bam 
+# bash SingleCellHMM.bash  Path_to_bam_file/pbmc4k_possorted_genome_bam.bam Path_to_SingleCellHMM.R
 
-WD=$1
-INPUT_BAM=$2 #pbmc4k_possorted_genome_bam.bam
-PL=/workdir/sc2457/SingleCellHMM/
+INPUT_BAM=$1 #pbmc4k_possorted_genome_bam.bam
+PL=$2
+${PL:=/workdir/sc2457/SingleCellHMM/}
 
-#cd ${WD}
-PREFIX=`echo ${INPUT_BAM} | rev | cut -d . -f 2- |rev`
+PREFIX=`echo ${INPUT_BAM} | rev | cut -d / -f 1 |cut -d . -f 2- |rev`
 tmp=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 TMPDIR=${PREFIX}_${tmp}
 mkdir ${TMPDIR}
@@ -13,42 +12,81 @@ mkdir ${TMPDIR}
 exec > >(tee SingleCellHMM_Run_${TMPDIR}.log)
 exec 2>&1
 echo "Path to SingleCellHMM.R   $PL" 
-echo "Path to INPUT_BAM         $WD"   
 echo "INPUT_BAM                 $INPUT_BAM"
 echo "temp folder               $TMPDIR"
 echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
 echo "Spliting and sorting reads..."
-bedtools bamtobed -i ${WD}/${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30 | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
- 
-echo ""
-echo "Start to run groHMM..."
+bedtools bamtobed -i ${WD}/${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30| awk '{print "chr"$0}' | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
+
 cd ${TMPDIR}
-R --vanilla --slave --args $(pwd) ${PREFIX}_split.sorted.bed.gz  < ${PL}/SingleCellHMM.R 
+zcat ${PREFIX}_split.sorted.bed.gz  |awk '{print $0 >> $1".bed"}' 
+find ${TMPDIR} -name "*.bed" -size -1024k -delete
+#wc chr*.bed -l > chr_read_count.txt
+
+echo ""
+echo "Start to run groHMM in each individual chromosome..."
+
+
+wait_a_second() {
+	joblist=($(jobs -p))
+    while (( ${#joblist[*]} >= 50 ))
+	    do
+	    sleep 1
+	    joblist=($(jobs -p))
+	done
+}
+
+
+for f in chr*.bed
+do 
+wait_a_second
+R --vanilla --slave --args $(pwd) ${f}  < ${PL}/SingleCellHMM.R  > ${f}.log 2>&1 &
+done
+#R --vanilla --slave --args $(pwd) ${PREFIX}_split.sorted.bed.gz  < ${PL}/SingleCellHMM.R 
+wait
 
 
 echo ""
 echo "Merging HMM blocks within 500bp..."
-f=${PREFIX}_split.sorted_HMM
-cat $f.bed | grep + > ${f}_plus
-cat $f.bed | grep - > ${f}_minus
-bedtools merge -s -d 500 -i ${f}_plus > ${f}_plus_merge500
-bedtools merge -s -d 500 -i ${f}_minus > ${f}_minus_merge500
-rm ${f}_plus ${f}_minus
-gzip ${f}.bed &
+for f in chr*_HMM.bed
+do	
+  LC_ALL=C sort -k1,1V -k2,2n --parallel=30 ${f} > ${f}.sorted.bed
+  cat ${f}.sorted.bed | grep + > ${f}_plus
+  cat ${f}.sorted.bed | grep - > ${f}_minus
+  bedtools merge -s -d 500 -i ${f}_plus > ${f}_plus_merge500 &
+  bedtools merge -s -d 500 -i ${f}_minus > ${f}_minus_merge500 &
+  wait_a_second
+done
 
-cat ${f}_plus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${f}_merge500
-cat ${f}_minus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${f}_merge500
-rm ${f}_plus_merge500 ${f}_minus_merge500
+wait 
+
+for f in chr*_HMM.bed
+do	
+mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_merge500 toremove/.
+done
+
+#f=${PREFIX}_split.sorted_HMM
+#gzip ${f}.bed &
+
+cat chr*_HMM.bed_plus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${PREFIX}_merge500
+cat chr*_HMM.bed_minus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${PREFIX}_merge500
+
+for f in chr*_HMM.bed
+do	
+mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_merge500 ${f}_plus_merge500 ${f}_minus_merge500 toremove/.
+done
+
 
 echo ""
 echo "Calculating the coverage..." 
+f=${PREFIX}
 LC_ALL=C sort -k1,1V -k2,2n ${f}_merge500 --parallel=30 > ${f}_merge500.sorted.bed
 rm ${f}_merge500
 
-wait
-bedtools coverage -a ${f}_merge500.sorted.bed -b ${PREFIX}_split.sorted.bed.gz -s -counts -split -sorted > ${f}_merge500.sorted.bed_count
+
+bedtools coverage -a ${f}_merge500.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz |awk '{print "chr"$0}') -s -counts -split -sorted > ${f}_merge500.sorted.bed_count
 
 echo ""
 echo "Filtering the HMM blocks by coverage..." 
