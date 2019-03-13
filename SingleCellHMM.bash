@@ -61,7 +61,7 @@ do
 done
 
 wait 
-
+mkdir toremove
 for f in chr*_HMM.bed
 do	
 mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_merge500 toremove/.
