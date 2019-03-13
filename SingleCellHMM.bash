@@ -83,15 +83,13 @@ LC_ALL=C sort -k1,1V -k2,2n ${f}_merge500 --parallel=30 > ${f}_merge500.sorted.b
 rm ${f}_merge500
 
 
-bedtools coverage -a ${f}_merge500.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz) -s -counts -split -sorted > ${f}_merge500.sorted.bed_count
+bedtools coverage -a ${f}_merge500.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz) -s -counts -split > ${f}_merge500.sorted.bed_count
 
 echo ""
 echo "Filtering the HMM blocks by coverage..." 
 cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 2){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge500_2reads.bed.gz
 cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 5){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge500_5reads.bed.gz
 
-#rm ${PREFIX}_split.bed.gz
-#mv ${f}_merge500.sorted.bed ${f}_merge500.sorted.bed_count ${TMPDIR}/.
 cd ..
 ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
 
