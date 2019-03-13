@@ -17,6 +17,7 @@ exec 2>&1
 echo "Path to SingleCellHMM.R   $PL" 
 echo "INPUT_BAM                 $INPUT_BAM"
 echo "temp folder               $TMPDIR"
+echo "number Of thread          $CORE"
 echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
