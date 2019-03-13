@@ -96,6 +96,13 @@ cd ..
 ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
 
 cd ${TMPDIR}
+mv chr* toremove/.
+
+for f in *
+do gzip ${f} &
+done
+
+cd toremove
 for f in *
 do gzip ${f} &
 done
