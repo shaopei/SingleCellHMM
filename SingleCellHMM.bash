@@ -18,11 +18,11 @@ echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
 echo "Spliting and sorting reads..."
-bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30| awk '{print "chr"$0}' | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
+bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30| awk '{print $0}' | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
 
 cd ${TMPDIR}
-zcat ${PREFIX}_split.sorted.bed.gz  |awk '{print $0 >> $1".bed"}' 
-find -name "*.bed" -size -1024k -delete
+zcat ${PREFIX}_split.sorted.bed.gz  |awk '{print $0 >> "chr"$1".bed"}' 
+find -name "chr*.bed" -size -1024k -delete
 #wc chr*.bed -l > chr_read_count.txt
 
 echo ""
@@ -62,10 +62,6 @@ done
 
 wait 
 mkdir toremove
-for f in chr*_HMM.bed
-do	
-mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_merge500 toremove/.
-done
 
 #f=${PREFIX}_split.sorted_HMM
 #gzip ${f}.bed &
@@ -73,9 +69,10 @@ done
 cat chr*_HMM.bed_plus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${PREFIX}_merge500
 cat chr*_HMM.bed_minus_merge500 | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${PREFIX}_merge500
 
+mkdir toremove
 for f in chr*_HMM.bed
 do	
-mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_merge500 ${f}_plus_merge500 ${f}_minus_merge500 toremove/.
+mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_plus_merge500 ${f}_minus_merge500 toremove/.
 done
 
 
