@@ -97,4 +97,11 @@ cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 5){print $1, $2
 #mv ${f}_merge500.sorted.bed ${f}_merge500.sorted.bed_count ${TMPDIR}/.
 cd ..
 ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
-gzip ${TMPDIR}/*
+
+cd ${TMPDIR}
+for f in *
+do gzip ${f} &
+done
+
+
+
