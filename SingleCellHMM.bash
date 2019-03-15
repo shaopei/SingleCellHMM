@@ -65,7 +65,7 @@ do
 done
 
 wait 
-mkdir toremove
+
 
 #f=${PREFIX}_split.sorted_HMM
 #gzip ${f}.bed &
@@ -106,8 +106,11 @@ ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
 
 echo ""
 echo "Move intermediate files to  ${TMPDIR}/toremove ..." 
-echo "#### ${TMPDIR}/toremove can be deleted if no error message in SingleCellHMM_Run log file and "
-echo "all major chromosomes are present in the final PREFIX_merge500_5reads.bed.gz file ####"
+echo ""
+echo "${TMPDIR}/toremove can be deleted if no error message in SingleCellHMM_Run log file and "
+echo "all major chromosomes are present in the final PREFIX_merge500_5reads.bed.gz file"
+echo ""
+echo ""
 
 cd ${TMPDIR}
 mv chr* toremove/.
