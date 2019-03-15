@@ -1,4 +1,4 @@
-# bash SingleCellHMM.bash  Path_to_bam_file/pbmc4k_possorted_genome_bam.bam numberOfThread Path_to_SingleCellHMM.R
+# bash SingleCellHMM.bash  Path_to_bam_file/PREFIX.bam numberOfThread Path_to_SingleCellHMM.R
 
 INPUT_BAM=$1 #pbmc4k_possorted_genome_bam.bam
 CORE=$2
