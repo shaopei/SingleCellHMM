@@ -123,4 +123,6 @@ done
 
 cd ../..
 
+echo ""
+echo "done!"
 
