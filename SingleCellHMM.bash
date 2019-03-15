@@ -106,7 +106,9 @@ ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
 
 echo ""
 echo "Move intermediate files to  ${TMPDIR}/toremove ..." 
-echo "#### ${TMPDIR}/toremove can be deleted if everything looks fine ####"
+echo "#### ${TMPDIR}/toremove can be deleted if no error message in log file and "
+echo "all major chromosomes are present in the final PREFIX_merge500_5reads.bed.gz file ####"
+
 cd ${TMPDIR}
 mv chr* toremove/.
 
