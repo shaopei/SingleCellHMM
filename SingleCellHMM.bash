@@ -94,9 +94,19 @@ echo "Filtering the HMM blocks by coverage..."
 cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 2){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge500_2reads.bed.gz
 cat ${f}_merge500.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 5){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge500_5reads.bed.gz
 
+echo "" 
+echo "#### Please examine if major chromosomes are all present in the final PREFIX_merge500_5reads.bed.gz file ####"
+zcat ${f}_merge500_5reads.bed.gz |cut -f 1 |uniq
+
+echo "" 
+echo "Link the final PREFIX_merge500_5reads.bed.gz file to the working directory"
 cd ..
 ln -s ${TMPDIR}/${f}_merge500_5reads.bed.gz .
 
+
+echo ""
+echo "Move intermediate files to  ${TMPDIR}/toremove ..." 
+echo "#### ${TMPDIR}/toremove can be deleted if everything looks fine ####"
 cd ${TMPDIR}
 mv chr* toremove/.
 
@@ -110,5 +120,5 @@ do gzip ${f} &
 done
 
 cd ../..
-zcat ${f}_merge500_5reads.bed.gz |cut -f 1 |uniq
+
 
