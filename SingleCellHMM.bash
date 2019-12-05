@@ -1,4 +1,4 @@
-# bash SingleCellHMM.bash  Path_to_bam_file/PREFIX.bam numberOfThread Path_to_SingleCellHMM.R
+# bash SingleCellHMM.bash  Path_to_bam_file/PREFIX.bam numberOfThread 5 500 Path_to_SingleCellHMM.R
 
 INPUT_BAM=$1 #pbmc4k_possorted_genome_bam.bam
 CORE=$2
@@ -22,31 +22,47 @@ echo "Path to SingleCellHMM.R   $PL"
 echo "INPUT_BAM                 $INPUT_BAM"
 echo "temp folder               $TMPDIR"
 echo "number Of thread          $CORE"
-echo "minimum coverage		$MINCOV"
+echo "minimum coverage		      $MINCOV"
 echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
 echo "Spliting and sorting reads..."
-bedtools bamtobed -i ${INPUT_BAM} -split |LC_ALL=C sort -k1,1V -k2,2n --parallel=30| awk '{print $0}' | gzip > ${TMPDIR}/${PREFIX}_split.sorted.bed.gz 
-
-cd ${TMPDIR}
-zcat ${PREFIX}_split.sorted.bed.gz  |awk '{print $0 >> "chr"$1".bed"}' 
-find -name "chr*.bed" -size -1024k -delete
-#wc chr*.bed -l > chr_read_count.txt
-
-echo ""
-echo "Start to run groHMM in each individual chromosome..."
 
 
 wait_a_second() {
-	joblist=($(jobs -p))
+  joblist=($(jobs -p))
     while (( ${#joblist[*]} >= ${CORE} ))
-	    do
-	    sleep 1
-	    joblist=($(jobs -p))
-	done
+      do
+      sleep 1
+      joblist=($(jobs -p))
+  done
 }
 
+# split bam file by chromosome
+bamtools split -in ${INPUT_BAM} -reference
+
+cd ${TMPDIR}
+mv ../${PREFIX}.REF_*.bam .
+
+# make bed files from bam files
+for f in ${PREFIX}.REF_*.bam
+do c=`echo $f| rev| cut -d . -f 2| cut -d _ -f 1 |rev| awk 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0} (substr($1,1,3)!="chr") {print "chr"$0}'`
+bedtools bamtobed -i ${f} -split |sort-bed - > ${c}.bed &
+wait_a_second
+done
+wait
+
+find -name "chr*.bed" -size -1024k -delete
+
+
+rm ${PREFIX}_split.sorted.bed.gz
+for c in `ls chr*.bed |rev|cut -d . -f 2|rev |LC_ALL=C sort -V`
+ do echo $c
+ cat ${c}.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz
+done
+
+echo ""
+echo "Start to run groHMM in each individual chromosome..."
 
 for f in chr*.bed
 do 
@@ -57,11 +73,13 @@ done
 wait
 
 
+
+
 echo ""
 echo "Merging HMM blocks within ${MERGEBP}bp..."
 for f in chr*_HMM.bed
 do	
-  LC_ALL=C sort -k1,1V -k2,2n --parallel=30 ${f} > ${f}.sorted.bed
+  LC_ALL=C sort -k1,1V -k2,2n --parallel=${CORE} ${f} > ${f}.sorted.bed
   cat ${f}.sorted.bed | grep + > ${f}_plus
   cat ${f}.sorted.bed | grep - > ${f}_minus
   bedtools merge -s -d ${MERGEBP} -i ${f}_plus > ${f}_plus_merge${MERGEBP} &
@@ -88,7 +106,7 @@ done
 echo ""
 echo "Calculating the coverage..." 
 f=${PREFIX}
-LC_ALL=C sort -k1,1V -k2,2n ${f}_merge${MERGEBP} --parallel=30 > ${f}_merge${MERGEBP}.sorted.bed
+LC_ALL=C sort -k1,1V -k2,2n ${f}_merge${MERGEBP} --parallel=${CORE} > ${f}_merge${MERGEBP}.sorted.bed
 rm ${f}_merge${MERGEBP}
 
 
