@@ -38,27 +38,24 @@ wait_a_second() {
   done
 }
 
-# split bam file by chromosome
-bamtools split -in ${INPUT_BAM} -reference
+bedtools bamtobed -i ${INPUT_BAM} -split |awk -v p=${PREFIX} -v d=${TMPDIR} 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0 >> d"/"p"_"$1".bed"} (substr($1,1,3)!="chr") {print "chr"$0 >> d"/"p"_chr"$1".bed"}' 
 
 cd ${TMPDIR}
-mv ../${PREFIX}.REF_*.bam .
-
-# make bed files from bam files
-for f in ${PREFIX}.REF_*.bam
-do c=`echo $f| rev| cut -d . -f 2| cut -d _ -f 1 |rev| awk 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0} (substr($1,1,3)!="chr") {print "chr"$0}'`
-bedtools bamtobed -i ${f} -split |sort-bed - > ${c}.bed &
-wait_a_second
+for f in ${PREFIX}_chr*.bed
+do echo $f
+h=`echo $f |rev |cut -d . -f 2-|rev`
+sort-bed $f | gzip > ${h}.sorted.bed.gz &
+wait_a_second()
 done
+
 wait
-
 find -name "chr*.bed" -size -1024k -delete
-
+#wc chr*.bed -l > chr_read_count.txt
 
 rm ${PREFIX}_split.sorted.bed.gz
-for c in `ls chr*.bed |rev|cut -d . -f 2|rev |LC_ALL=C sort -V`
+for c in `ls ${PREFIX}_chr*.sorted.bed.gz |rev|cut -d . -f 4-| cut -d _ -f 1| rev |LC_ALL=C sort -V`
  do echo $c
- cat ${c}.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz
+ zcat ${PREFIX}_${c}.sorted.bed.gz |gzip >>  ${PREFIX}_split.sorted.bed.gz
 done
 
 echo ""
