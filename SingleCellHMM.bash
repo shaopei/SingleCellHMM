@@ -6,21 +6,25 @@ MINCOV=$3
 MERGEBP=$4
 PL=$5
 
-${CORE:=5}
-${MINCOV:=5}
-${MERGEBP:=500}
-${PL:=/workdir/fw262/ShaoPei/pipeline/scripts}
+CORE=${CORE:=5}
+MINCOV=${MINCOV:=5}
+MERGEBP=${MERGEBP:=500}
+PL=${PL:=/workdir/fw262/ShaoPei/pipeline/scripts}
 
 PREFIX=`echo ${INPUT_BAM} | rev | cut -d / -f 1 |cut -d . -f 2- |rev`
 tmp="HMM_features"
 TMPDIR=${PREFIX}-${tmp}
-mkdir ${TMPDIR}
+
 
 exec > >(tee SingleCellHMM_Run_${TMPDIR}.log)
 exec 2>&1
 date 
 echo "Path to SingleCellHMM.R   $PL" 
 echo "INPUT_BAM                 $INPUT_BAM"
+if [[ $PREFIX == *"-"* ]]; then
+  echo "Please use NO - in INPUT_BAM"
+  exit 0
+fi
 echo "temp folder               $TMPDIR"
 echo "number Of thread          $CORE"
 echo "minimum coverage		      $MINCOV"
@@ -39,14 +43,18 @@ wait_a_second() {
   done
 }
 
+mkdir ${TMPDIR}
 bedtools bamtobed -i ${INPUT_BAM} -split |awk -v p=${PREFIX} -v d=${TMPDIR} 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0 >> d"/"p"-"$1".bed"} (substr($1,1,3)!="chr") {print "chr"$0 >> d"/"p"-chr"$1".bed"}' 
 
 cd ${TMPDIR}
+echo "Delete chr bed files that are smaller than 1G ..."
 find -name "${PREFIX}-chr*.bed" -size -1024k -delete
 
+echo "Sort each chr bed file that is larger than 1G ..."
 for f in ${PREFIX}-chr*.bed
 do echo $f
 h=`echo $f |rev |cut -d . -f 2-|rev`
+echo $h
 sort-bed $f | gzip > ${h}.sorted.bed.gz &
 wait_a_second()
 done
@@ -56,7 +64,7 @@ wait
 #wc chr*.bed -l > chr_read_count.txt
 
 rm ${PREFIX}_split.sorted.bed.gz
-for c in `ls ${PREFIX}_chr*.sorted.bed.gz |rev|cut -d . -f 4-| cut -d - -f 1| rev |LC_ALL=C sort -V`
+for c in `ls ${PREFIX}-chr*.sorted.bed.gz |rev|cut -d . -f 4-| rev | cut -d - -f 2-|LC_ALL=C sort -V`
  do echo $c
  zcat ${PREFIX}-${c}.sorted.bed.gz |gzip >>  ${PREFIX}_split.sorted.bed.gz
 done
