@@ -13,11 +13,12 @@ ${PL:=/workdir/fw262/ShaoPei/pipeline/scripts}
 
 PREFIX=`echo ${INPUT_BAM} | rev | cut -d / -f 1 |cut -d . -f 2- |rev`
 tmp="HMM_features"
-TMPDIR=${PREFIX}_${tmp}
+TMPDIR=${PREFIX}-${tmp}
 mkdir ${TMPDIR}
 
 exec > >(tee SingleCellHMM_Run_${TMPDIR}.log)
 exec 2>&1
+date 
 echo "Path to SingleCellHMM.R   $PL" 
 echo "INPUT_BAM                 $INPUT_BAM"
 echo "temp folder               $TMPDIR"
@@ -38,10 +39,12 @@ wait_a_second() {
   done
 }
 
-bedtools bamtobed -i ${INPUT_BAM} -split |awk -v p=${PREFIX} -v d=${TMPDIR} 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0 >> d"/"p"_"$1".bed"} (substr($1,1,3)!="chr") {print "chr"$0 >> d"/"p"_chr"$1".bed"}' 
+bedtools bamtobed -i ${INPUT_BAM} -split |awk -v p=${PREFIX} -v d=${TMPDIR} 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0 >> d"/"p"-"$1".bed"} (substr($1,1,3)!="chr") {print "chr"$0 >> d"/"p"-chr"$1".bed"}' 
 
 cd ${TMPDIR}
-for f in ${PREFIX}_chr*.bed
+find -name "${PREFIX}-chr*.bed" -size -1024k -delete
+
+for f in ${PREFIX}-chr*.bed
 do echo $f
 h=`echo $f |rev |cut -d . -f 2-|rev`
 sort-bed $f | gzip > ${h}.sorted.bed.gz &
@@ -49,13 +52,13 @@ wait_a_second()
 done
 
 wait
-find -name "chr*.bed" -size -1024k -delete
+
 #wc chr*.bed -l > chr_read_count.txt
 
 rm ${PREFIX}_split.sorted.bed.gz
-for c in `ls ${PREFIX}_chr*.sorted.bed.gz |rev|cut -d . -f 4-| cut -d _ -f 1| rev |LC_ALL=C sort -V`
+for c in `ls ${PREFIX}_chr*.sorted.bed.gz |rev|cut -d . -f 4-| cut -d - -f 1| rev |LC_ALL=C sort -V`
  do echo $c
- zcat ${PREFIX}_${c}.sorted.bed.gz |gzip >>  ${PREFIX}_split.sorted.bed.gz
+ zcat ${PREFIX}-${c}.sorted.bed.gz |gzip >>  ${PREFIX}_split.sorted.bed.gz
 done
 
 echo ""
@@ -147,5 +150,6 @@ done
 cd ../..
 
 echo ""
+date 
 echo "done!"
 
