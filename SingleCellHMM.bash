@@ -6,7 +6,7 @@ MINCOV=$3
 MERGEBP=$4
 PL=$5
 
-CORE=${CORE:=5}
+CORE=${CORE:=1}
 MINCOV=${MINCOV:=5}
 MERGEBP=${MERGEBP:=500}
 PL=${PL:=/workdir/fw262/ShaoPei/pipeline/scripts}
@@ -56,7 +56,7 @@ do echo $f
 h=`echo $f |rev |cut -d . -f 2-|rev`
 echo $h
 sort-bed $f | gzip > ${h}.sorted.bed.gz &
-wait_a_second()
+wait_a_second
 done
 
 wait
