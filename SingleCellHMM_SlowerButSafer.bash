@@ -70,21 +70,8 @@ rm ${PREFIX}_split.sorted.bed.gz
 for c in `ls ${PREFIX}-chr*.sorted.bed |rev|cut -d . -f 3-| rev | cut -d - -f 2-|LC_ALL=C sort -V`
  do echo $c
  R --vanilla --slave --args $(pwd) ${PREFIX}-${c}.sorted.bed  < ${PL}/SingleCellHMM.R  > ${PREFIX}-${c}.sorted.bed.HMM.log 2>&1
- zcat ${PREFIX}-${c}.sorted.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz &
+ cat ${PREFIX}-${c}.sorted.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz &
 done
-
-#echo ""
-#echo "Start to run groHMM in each individual chromosome..."
-
-#for f in ${PREFIX}-chr*.sorted.bed
-#do 
-#wait_a_second
-#R --vanilla --slave --args $(pwd) ${f}  < ${PL}/SingleCellHMM.R  > ${f}.log 2>&1
-#done
-#R --vanilla --slave --args $(pwd) ${PREFIX}_split.sorted.bed.gz  < ${PL}/SingleCellHMM.R 
-#wait
-
-
 
 
 echo ""
