@@ -55,8 +55,9 @@ for f in ${PREFIX}-chr*.bed
 do echo $f
 h=`echo $f |rev |cut -d . -f 2-|rev`
 echo $h
-sort-bed $f | gzip > ${h}.sorted.bed.gz &
-wait_a_second
+#sort-bed $f | gzip > ${h}.sorted.bed.gz &
+LC_ALL=C sort --parallel=${CORE} -k1,2n -k2,3n $f > ${h}.sorted.bed
+#gzip ${h}.sorted.bed &
 done
 
 wait
@@ -64,15 +65,15 @@ wait
 #wc chr*.bed -l > chr_read_count.txt
 
 rm ${PREFIX}_split.sorted.bed.gz
-for c in `ls ${PREFIX}-chr*.sorted.bed.gz |rev|cut -d . -f 4-| rev | cut -d - -f 2-|LC_ALL=C sort -V`
+for c in `ls ${PREFIX}-chr*.sorted.bed |rev|cut -d . -f 3-| rev | cut -d - -f 2-|LC_ALL=C sort -V`
  do echo $c
- zcat ${PREFIX}-${c}.sorted.bed.gz |gzip >>  ${PREFIX}_split.sorted.bed.gz
+ cat ${PREFIX}-${c}.sorted.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz
 done
 
 echo ""
 echo "Start to run groHMM in each individual chromosome..."
 
-for f in chr*.bed
+for f in ${PREFIX}-chr*.sorted.bed
 do 
 wait_a_second
 R --vanilla --slave --args $(pwd) ${f}  < ${PL}/SingleCellHMM.R  > ${f}.log 2>&1 &
@@ -85,7 +86,7 @@ wait
 
 echo ""
 echo "Merging HMM blocks within ${MERGEBP}bp..."
-for f in chr*_HMM.bed
+for f in ${PREFIX}-chr*_HMM.bed
 do	
   LC_ALL=C sort -k1,1V -k2,2n --parallel=${CORE} ${f} > ${f}.sorted.bed
   cat ${f}.sorted.bed | grep + > ${f}_plus
@@ -101,11 +102,11 @@ wait
 #f=${PREFIX}_split.sorted_HMM
 #gzip ${f}.bed &
 
-cat chr*_HMM.bed_plus_merge${MERGEBP} | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${PREFIX}_merge${MERGEBP}
-cat chr*_HMM.bed_minus_merge${MERGEBP} | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${PREFIX}_merge${MERGEBP}
+cat ${PREFIX}-chr*_HMM.bed_plus_merge${MERGEBP} | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "+"}' > ${PREFIX}_merge${MERGEBP}
+cat ${PREFIX}-chr*_HMM.bed_minus_merge${MERGEBP} | awk 'BEGIN{OFS="\t"} {print $0, ".", ".", "-"}' >> ${PREFIX}_merge${MERGEBP}
 
 mkdir toremove
-for f in chr*_HMM.bed
+for f in ${PREFIX}-chr*_HMM.bed
 do	
 mv ${f}.sorted.bed ${f}_plus ${f}_minus ${f}_plus_merge${MERGEBP} ${f}_minus_merge${MERGEBP} toremove/.
 done
@@ -113,26 +114,25 @@ done
 
 echo ""
 echo "Calculating the coverage..." 
-f=${PREFIX}
-LC_ALL=C sort -k1,1V -k2,2n ${f}_merge${MERGEBP} --parallel=${CORE} > ${f}_merge${MERGEBP}.sorted.bed
-rm ${f}_merge${MERGEBP}
+LC_ALL=C sort -k1,1V -k2,2n ${PREFIX}_merge${MERGEBP} --parallel=${CORE} > ${PREFIX}_merge${MERGEBP}.sorted.bed
+rm ${PREFIX}_merge${MERGEBP}
 
 
-bedtools coverage -a ${f}_merge${MERGEBP}.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz) -s -counts -split -sorted > ${f}_merge${MERGEBP}.sorted.bed_count
+bedtools coverage -a ${PREFIX}_merge${MERGEBP}.sorted.bed -b <(zcat ${PREFIX}_split.sorted.bed.gz) -s -counts -split -sorted > ${PREFIX}_merge${MERGEBP}.sorted.bed_count
 
 echo ""
 echo "Filtering the HMM blocks by coverage..." 
-#cat ${f}_merge${MERGEBP}.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 2){print $1, $2, $3, $4, $5, $6}' | gzip > ${f}_merge${MERGEBP}_2reads.bed.gz
-cat ${f}_merge${MERGEBP}.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= '$MINCOV'){print $1, $2, $3, $4, $5, $6, $7}' | gzip > ${f}_merge${MERGEBP}_${MINCOV}reads.bed.gz
+#cat ${PREFIX}_merge${MERGEBP}.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= 2){print $1, $2, $3, $4, $5, $6}' | gzip > ${PREFIX}_merge${MERGEBP}_2reads.bed.gz
+cat ${PREFIX}_merge${MERGEBP}.sorted.bed_count | awk 'BEGIN{OFS="\t"} ($7 >= '$MINCOV'){print $1, $2, $3, $4, $5, $6, $7}' | gzip > ${PREFIX}_merge${MERGEBP}_${MINCOV}reads.bed.gz
 
 echo "" 
 echo "#### Please examine if major chromosomes are all present in the final PREFIX_merge${MERGEBP}_${MINCOV}reads.bed.gz file ####"
-zcat ${f}_merge${MERGEBP}_${MINCOV}reads.bed.gz |cut -f 1 |uniq
+zcat ${PREFIX}_merge${MERGEBP}_${MINCOV}reads.bed.gz |cut -f 1 |uniq
 
 echo "" 
 echo "Link the final PREFIX_merge${MERGEBP}_${MINCOV}reads.bed.gz file to the working directory"
 cd ..
-ln -s ${TMPDIR}/${f}_merge${MERGEBP}_${MINCOV}reads.bed.gz .
+ln -s ${TMPDIR}/${PREFIX}_merge${MERGEBP}_${MINCOV}reads.bed.gz .
 
 
 echo ""
