@@ -9,7 +9,7 @@ PL=$5
 CORE=${CORE:=1}
 MINCOV=${MINCOV:=5}
 MERGEBP=${MERGEBP:=500}
-PL=${PL:=/workdir/fw262/ShaoPei/pipeline/scripts}
+PL=${PL:=~}
 
 PREFIX=`echo ${INPUT_BAM} | rev | cut -d / -f 1 |cut -d . -f 2- |rev`
 tmp="HMM_features"
@@ -144,7 +144,7 @@ echo ""
 echo ""
 
 cd ${TMPDIR}
-mv chr* toremove/.
+mv ${PREFIX}-chr* toremove/.
 
 for f in *
 do gzip ${f} &

@@ -9,7 +9,7 @@ PL=$5
 CORE=${CORE:=1}
 MINCOV=${MINCOV:=5}
 MERGEBP=${MERGEBP:=500}
-PL=${PL:=/workdir/fw262/ShaoPei/pipeline/scripts}
+PL=${PL:=~}
 
 PREFIX=`echo ${INPUT_BAM} | rev | cut -d / -f 1 |cut -d . -f 2- |rev`
 tmp="HMM_features"
@@ -64,14 +64,23 @@ wait
 
 #wc chr*.bed -l > chr_read_count.txt
 echo ""
-echo "Start to run groHMM in each individual chromosome..."
-
+echo "Make ${PREFIX}_split.sorted.bed.gz... from individual chromosomes"
 rm ${PREFIX}_split.sorted.bed.gz
 for c in `ls ${PREFIX}-chr*.sorted.bed |rev|cut -d . -f 3-| rev | cut -d - -f 2-|LC_ALL=C sort -V`
  do echo $c
- R --vanilla --slave --args $(pwd) ${PREFIX}-${c}.sorted.bed  < ${PL}/SingleCellHMM.R  > ${PREFIX}-${c}.sorted.bed.HMM.log 2>&1
- cat ${PREFIX}-${c}.sorted.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz &
+ cat ${PREFIX}-${c}.sorted.bed |gzip >>  ${PREFIX}_split.sorted.bed.gz
 done
+
+echo ""
+echo "Start to run groHMM in each individual chromosome..."
+
+for f in ${PREFIX}-chr*.sorted.bed
+do 
+R --vanilla --slave --args $(pwd) ${f}  < ${PL}/SingleCellHMM.R  > ${f}.log 2>&1 
+done
+#R --vanilla --slave --args $(pwd) ${PREFIX}_split.sorted.bed.gz  < ${PL}/SingleCellHMM.R 
+wait
+
 
 
 echo ""
@@ -134,7 +143,7 @@ echo ""
 echo ""
 
 cd ${TMPDIR}
-mv chr* toremove/.
+mv ${PREFIX}-chr* toremove/.
 
 for f in *
 do gzip ${f} &

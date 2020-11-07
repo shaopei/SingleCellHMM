@@ -27,7 +27,7 @@ echo "minimum coverage		      $MINCOV"
 echo ""
 echo "Reads spanning over splicing junction will join HMM blocks"
 echo "To avoid that, split reads into small blocks before input to groHMM"
-echo "Spliting and sorting reads..."
+
 
 
 wait_a_second() {
@@ -39,6 +39,7 @@ wait_a_second() {
   done
 }
 
+echo "Spliting bam file by reference..."
 # split bam file by chromosome
 bamtools split -in ${INPUT_BAM} -reference
 
@@ -46,13 +47,17 @@ cd ${TMPDIR}
 mv ../${PREFIX}.REF_*.bam .
 
 # make bed files from bam files
+echo "Spliting and sorting reads..."
 for f in ${PREFIX}.REF_*.bam
-do c=`echo $f| rev| cut -d . -f 2| cut -d _ -f 1 |rev| awk 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0} (substr($1,1,3)!="chr") {print "chr"$0}'`
+do echo $f
+c=`echo $f| rev| cut -d . -f 2| cut -d _ -f 1 |rev| awk 'BEGIN {OFS=""}(substr($1,1,3)=="chr"){print $0} (substr($1,1,3)!="chr") {print "chr"$0}'`
+echo $c
 bedtools bamtobed -i ${f} -split |sort-bed - > ${c}.bed &
 wait_a_second
 done
 wait
 
+echo "Delete chr bed files that are smaller than 1G..."
 find -name "chr*.bed" -size -1024k -delete
 
 
